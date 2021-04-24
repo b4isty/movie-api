@@ -1,0 +1,13 @@
+version: "3"
+services:
+  api:
+    restart: always
+    container_name: movie_api
+    volumes:
+    - .:/code
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+    build:
+      context: .
+    ports:
+    - "8000:8000"
