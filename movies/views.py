@@ -7,13 +7,18 @@ import httpx
 from django.conf import settings
 from httpx import Response as httpx_response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 logger = logging.getLogger(__name__)
 
 
 class MovieListAPI(APIView):
+    authentication_classes = (JSONWebTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request, *args, **kwargs):
         page = request.query_params.get('page', '')
         url = self.build_url(page=page)
