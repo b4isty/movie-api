@@ -1,13 +1,52 @@
 version: "3"
+
 services:
-  api:
+  db:
     restart: always
-    container_name: movie_api
+    image: 'postgres:11'
+    container_name: movie_db
+
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: db_local
+      POSTGRES_USER: postgres
+      POSTGRES_PASS: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
-    - .:/code
-    command: >
-      sh -c "python manage.py runserver 0.0.0.0:8000"
+      - pgdata:/var/lib/postgresql/data/
+      - .:/code
+    networks:
+      - movie_network
+
+  web:
+    restart: always
+    container_name: movie_web
+    environment:
+      - DB_HOST=movie_db
+      - DB_PORT=5432
+      - DB_NAME=db_local
+    env_file:
+      - .env
     build:
       context: .
     ports:
-    - "8000:8000"
+      - "8000:8000"
+    volumes:
+      - .:/code
+    command: >
+      sh -c "
+             python3 manage.py makemigrations --noinput &&
+             python3 manage.py migrate --noinput &&
+             python3 manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      - db
+    networks:
+      - movie_network
+
+
+volumes:
+  pgdata:
+
+networks:
+  movie_network:

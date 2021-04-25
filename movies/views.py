@@ -5,12 +5,18 @@ import httpx
 
 # Create your views here.
 from django.conf import settings
+from django.db.models import Count
 from httpx import Response as httpx_response
 from rest_framework import status
+from rest_framework.mixins import DestroyModelMixin
+from rest_framework.generics import ListCreateAPIView, UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+
+from movies.models import Collection, Movie
+from movies.serializers import CollectionSerializer, CollectionUpdateSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -95,3 +101,33 @@ class MovieListAPI(APIView):
 
         return resp or httpx_response(content=fallback_content,
                                       status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CollectionListCreateAPIView(ListCreateAPIView):
+    authentication_classes = (JSONWebTokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CollectionSerializer
+
+    def get_queryset(self):
+        print(self.request.user)
+        qs = Collection.objects.filter(user=self.request.user)
+        return qs
+
+    def perform_create(self, serializer):
+        return serializer.save(user=self.request.user)
+
+
+class CollectionUpdateDestroyAPIView(DestroyModelMixin, UpdateAPIView):
+    authentication_classes = (JSONWebTokenAuthentication, )
+    permission_classes = (IsAuthenticated, )
+    serializer_class = CollectionUpdateSerializer
+    lookup_field = 'collection_uuid'
+
+    def get_queryset(self):
+        return Collection.objects.filter(user=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+
+
