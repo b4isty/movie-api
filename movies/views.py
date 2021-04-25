@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class MovieListAPI(APIView):
+    """
+    MovieListAPI fetch movie data from external api and sends back to user
+    """
     authentication_classes = (JSONWebTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
@@ -27,14 +30,22 @@ class MovieListAPI(APIView):
         return Response(data=api_resp.json(), status=api_resp.status_code)
 
     def _get_movie_api_resource(self, url):
+        """
+        _get_movie_api_resource private method(meant to be private)  to communicate with external api
+        this method directly calls Credy movie API using httpx lib, which also
+        supports async http call. The main reason to make it a separate
+        method is to make it easier to mock.
+        It returns httpx response or blank dict
+        """
         api_resp = dict()
         retry = True
         for i in range(2):
             if not retry:
                 break
             try:
+                # actual api call
                 api_resp = httpx.get(url, auth=(settings.API_USERNAME, settings.API_PASSWORD))
-
+                # we raise RequestError if there is any issue with the response
                 if not isinstance(api_resp, httpx_response) or api_resp.status_code != status.HTTP_200_OK:
                     logger.error(
                         "Error occurred while requesting for user {} url {}".format(
@@ -42,6 +53,7 @@ class MovieListAPI(APIView):
                         )
                     )
                     raise httpx.RequestError(message="Error occurred", request=api_resp.request)
+                # if success we don't want any retry
                 retry = False
 
             except httpx.RequestError as req_err:
@@ -51,19 +63,27 @@ class MovieListAPI(APIView):
                     )
                 )
             if i != 0:
+                # log the retry cases(may be for metric)
                 logger.warning("Retrying {} times for user {} url {}".format(i, self.request.user.username, url))
 
         return api_resp
 
     @staticmethod
     def build_url(page) -> str:
+        """
+        Build and return the url based on page param
+        """
         url = settings.MOVIE_API_URL
         if page:
             url = url + '?' + 'page=' + page
         return url
 
     @staticmethod
-    def _validate_external_api_resp(resp):
+    def _validate_external_api_resp(resp) -> httpx_response:
+        """
+        Checks for the response and if there is no response value
+        or blank, it returns a static fallback httpx Response obj
+        """
 
         fallback_content = json.dumps({
             "error": {

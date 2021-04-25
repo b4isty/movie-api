@@ -5,5 +5,8 @@ from django.contrib.auth.models import AbstractUser
 # Create your models here.
 
 class CustomUser(AbstractUser):
-    """overriding Abstract User Model"""
+    """
+    override Abstract User Model for future customization
+    ex: email authentication
+    """
     pass
