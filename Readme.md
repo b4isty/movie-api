@@ -18,6 +18,7 @@ Clone this repo
 ```bash
 git clone https://github.com/b4isty/movie-api.git
 ```
+- Rename the .env.example to .env file and set the API username and password on that file
 
 ### To run this project using docker
 - Go to project directory 
