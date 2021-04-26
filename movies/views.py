@@ -15,7 +15,7 @@ from rest_framework.reverse import reverse
 from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
-from core.renderers import MovieListJSONRenderer, CollectionListRenderer
+from core.renderers import MovieListJSONRenderer
 from movies.models import Collection
 from movies.serializers import CollectionSerializer, CollectionUpdateSerializer
 
@@ -34,8 +34,8 @@ class MovieListAPI(APIView):
         page = request.query_params.get('page', '')
         url = self.build_url(page=page)
         api_resp = self._get_movie_api_resource(url)
-        resp = self._validate_external_api_resp(resp=api_resp)
-        return Response(data=resp, status=api_resp.status_code)
+        api_resp = self._validate_external_api_resp(resp=api_resp)
+        return Response(data=api_resp.json(), status=api_resp.status_code)
 
     def _get_movie_api_resource(self, url):
         """
@@ -91,22 +91,25 @@ class MovieListAPI(APIView):
         Checks for the response and if there is no response value
         or blank, it returns a static fallback httpx Response obj
         """
-        resp = resp.json() or {}
+        if not resp:
+            resp_data = dict()
+        else:
+            resp_data = resp.json()
         if resp:
-
-            if resp.get('previous'):
-                query_part = urlparse(resp.get('previous')).query
+            # modifying previous and next otherwise it will show source api url to user
+            if resp_data.get('previous'):
+                query_part = urlparse(resp_data.get('previous')).query
                 prev_url = reverse('movies:movie_list', request=self.request)
                 if query_part:
                     prev_url += "?" + query_part
-                resp['previous'] = prev_url
+                resp_data['previous'] = prev_url
 
-            if resp.get('next'):
-                query_part = urlparse(resp.get('next')).query
+            if resp_data.get('next'):
+                query_part = urlparse(resp_data.get('next')).query
                 next_url = reverse('movies:movie_list', request=self.request)
                 if query_part:
                     next_url += "?" + query_part
-                resp['next'] = next_url
+                resp_data['next'] = next_url
 
         fallback_content = json.dumps({
             "error": {
@@ -115,20 +118,24 @@ class MovieListAPI(APIView):
             }
         }
         )
-
-        return resp or fallback_content
+        # create a dummy response object if there is no resp obj is
+        # coming from server
+        if not resp:
+            return httpx_response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                  content=json.dumps(fallback_content)
+                                  )
+        resp = httpx_response(status_code=resp.status_code, content=json.dumps(resp_data))
+        return resp
 
 
 class CollectionListCreateAPIView(ListCreateAPIView):
+    """
+    Collection List Create API View to get the list of
+    collections and create collection object
+    """
     authentication_classes = (JSONWebTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = CollectionSerializer
-    renderer_classes = (CollectionListRenderer, )
-
-    # def get_renderers(self):
-    #     if self.request.method == 'GET':
-    #         return [CollectionListRenderer,]
-    #     return super(CollectionListCreateAPIView, self).get_renderers()
 
     def get_queryset(self):
         qs = Collection.objects.filter(user=self.request.user)
@@ -139,12 +146,19 @@ class CollectionListCreateAPIView(ListCreateAPIView):
 
 
 class CollectionUpdateDestroyAPIView(DestroyModelMixin, UpdateAPIView):
+    """
+    CollectionUpdateDestroyAPIView updates collection and it's movies
+    or delete the collections by required method calling
+    """
     authentication_classes = (JSONWebTokenAuthentication,)
     permission_classes = (IsAuthenticated,)
     serializer_class = CollectionUpdateSerializer
     lookup_field = 'collection_uuid'
 
     def get_queryset(self):
+        """
+        Override get_queryset to restrict the qs to only request.user's
+        """
         return Collection.objects.filter(user=self.request.user)
 
     def delete(self, request, *args, **kwargs):

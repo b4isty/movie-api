@@ -5,6 +5,11 @@ from core.models import RequestCounter
 
 
 def set_request_count(request):
+    """
+    It increases the count on request or create the obj
+    for the first time. Being called from multiple places
+    so decided to factor this as func
+    """
     try:
         # getting admin index url
         admin_index = reverse('admin:index')

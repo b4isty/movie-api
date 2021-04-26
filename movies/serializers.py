@@ -12,7 +12,6 @@ class MovieSerializer(serializers.ModelSerializer):
 
 class CollectionSerializer(serializers.ModelSerializer):
     uuid = serializers.UUIDField(source='collection_uuid', required=False)
-    # movies = serializers.SerializerMethodField('get_movies_titles')
     movies = MovieSerializer(many=True, write_only=True)
     favorite_genres = serializers.SerializerMethodField('get_favorite_genres')
 
@@ -72,6 +71,7 @@ class CollectionUpdateSerializer(serializers.ModelSerializer):
         }
 
     def update(self, instance, validated_data):
+        """Update method to update the given fields"""
         movies = self.validated_data.pop('movies', None)
         instance.title = validated_data.pop('title', instance.title)
         instance.description = validated_data.pop('description', instance.description)
