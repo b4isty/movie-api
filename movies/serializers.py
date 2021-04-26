@@ -53,7 +53,8 @@ class CollectionSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super(CollectionSerializer, self).to_representation(instance)
-        if self.context['request'].method == 'POST':
+        request = self.context['request']
+        if request.method == 'POST':
             return {'collection_uuid': representation['uuid']}
         return representation
 
