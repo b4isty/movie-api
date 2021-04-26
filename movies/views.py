@@ -2,20 +2,18 @@ import json
 import logging
 
 import httpx
-
 # Create your views here.
 from django.conf import settings
-from django.db.models import Count
 from httpx import Response as httpx_response
 from rest_framework import status
-from rest_framework.mixins import DestroyModelMixin
 from rest_framework.generics import ListCreateAPIView, UpdateAPIView
+from rest_framework.mixins import DestroyModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
-from movies.models import Collection, Movie
+from movies.models import Collection
 from movies.serializers import CollectionSerializer, CollectionUpdateSerializer
 
 logger = logging.getLogger(__name__)
@@ -109,7 +107,6 @@ class CollectionListCreateAPIView(ListCreateAPIView):
     serializer_class = CollectionSerializer
 
     def get_queryset(self):
-        print(self.request.user)
         qs = Collection.objects.filter(user=self.request.user)
         return qs
 
